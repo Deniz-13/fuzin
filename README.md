@@ -8,12 +8,12 @@ A lightning-fast, cross-platform terminal wrapper that unifies package managemen
   <td width="50%" align="center">
       <b> Linux </b><br><br>
       <i></i><br><br>
-      <img src="img/linux.gif" width="100%" alt="Linux Demo">
+      <img src="img/linux-demo.gif" width="100%" alt="Linux Demo">
     </td>
     <td width="50%" align="center">
       <b> Brew </b><br><br>
       <i></i><br><br>
-      <img src="img/brew.gif" width="100%" alt="macOS Demo">
+      <img src="img/macos-demo.gif" width="100%" alt="macOS Demo">
     </td>
   </tr>
 </table>

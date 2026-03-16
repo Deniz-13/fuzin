@@ -13,7 +13,7 @@ A lightning-fast, cross-platform terminal wrapper that unifies package managemen
     <td width="50%" align="center">
       <b> Brew </b><br><br>
       <i></i><br><br>
-      <img src="img/macos-demo.gif" width="100%" alt="macOS Demo">
+      <img src="img/macos-demo.mov" width="100%" alt="macOS Demo">
     </td>
   </tr>
 </table>

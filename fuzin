@@ -1,0 +1,189 @@
+#!/bin/bash
+
+ParseArgument() {
+    # check if --remove flag is active. Default mode is install.
+    case "$1" in
+        "-r" | "--remove")
+            mode="remove"
+            ;;
+        "")
+            ##set the default mode to install
+            mode="install"
+            ;;
+        "-i" | "--install")
+            mode="install"
+            ;;
+        *)
+            echo "Wrong argument '$1'"
+            echo "Usage;"
+            echo "-i or --install for installing packages. The default mode is install."
+            echo "-r or --remove for removing packges."
+            exit 1
+            ;;
+    esac
+}
+
+# Detecting package manager.
+DetectPM() {
+    #PACMAN support
+    if command -v pacman > /dev/null 2>&1; then
+        packageManager="pacman"
+
+        if [[ "$mode" == "remove" ]]; then
+            ## list installed packages installed on local machine.
+            list="pacman -Qq"
+            ## -Rns removes the package with its dependencies.
+            operation="sudo pacman -Rns"
+            ## show preview of installed package
+            preview="pacman -Qi {}"
+        else
+            ## list pacman repository
+            list="pacman -Ssq"
+            operation="sudo pacman -S"
+            preview="pacman -Si {}"
+        fi
+
+    #APT support
+    elif command -v apt > /dev/null 2>&1; then
+        packageManager="apt"
+
+        if [[ "$mode" == "remove" ]]; then
+            ## list only installed programs.
+            list="dpkg --get-selections | grep -w install | awk '{print \$1'"
+            operation="sudo apt remove"
+            preview="dpkg -s {}"
+        else
+            list="apt-cache pkgnames"
+            operation="sudo apt install"
+            preview="apt-cache show {}"
+        fi
+
+    #Brew suppport
+    elif command -v brew > /dev/null 2>&1; then
+        packageManager="brew"
+
+        if [[ "$mode" == "remove" ]]; then
+            list="brew list -1"
+            operation="brew uninstall"
+            preview="brew info {}"
+        else
+            list="{ brew formulae; brew casks; }"
+            operation="brew install"
+            preview="brew info {}"
+        fi
+
+    #DNF support
+    elif command -v dnf > /dev/null 2>&1; then
+        packageManager="dnf"
+        if [[ "$mode" == "remove" ]]; then
+            list="dnf -q list installed | tail -n +2 | awk '{print \$1'"
+            operation="sudo dnf remove"
+            preview="dnf info {}"
+        else
+            list="dnf -q list available | tail -n +2 | awk '{print \$1'"
+            operation="sudo dnf install"
+            preview="dnf info {}"
+        fi
+
+    #ZYPPER suppport
+    elif command -v zypper > /dev/null 2>&1; then
+        packageManager="zypper"
+        if [[ "$mode" == "remove" ]]; then
+            list="zypper -q search -i | tail -n +5 | awk -F'|' '{print \$2' | tr -d ' '"
+            operation="sudo zypper remove"
+            preview="zypper info {}"
+        else
+            list="zypper -q search | tail -n +5 | awk -F'|' '{print \$2' | tr -d ' '"
+            operation="sudo zypper install"
+            preview="zypper info {}"
+        fi
+
+    #Exit if no package manager found.
+    else
+        echo "No supported package manager found."
+        exit 1
+    fi
+}
+
+CheckFzf() {
+    #Check if fzf is installed.
+    if !command -v fzf > /dev/null 2>&1; then
+        echo "fzf is not installed."
+
+        #ask to user if they want to install fzf.
+        read -p "Do you want to install fzf using $packageManager? (y/N): " fzfAns
+
+        if [[ "$fzfAns" == "y" || "$fzfAns" == "Y" ]]; then
+            echo "installing fzf..."
+            eval "$operation fzf"
+
+            #check if fzf installation complete
+            if !command -v fzf > /dev/null 2>&1; then
+                echo "fzf installation failed. Please re-run the script or install it manually."
+                exit 1
+            else
+                echo "fzf installation complete."
+            fi
+        else
+            echo "Can not run the script without fzf. Exiting."
+            exit 1
+        fi
+    fi
+}
+
+#Main Program
+DetectPM
+CheckFzf
+HandleAur() {
+    if command -v yay > /dev/null 2>&1; then
+        aurHelper="yay"
+    elif command -v paru > /dev/null 2>&1; then
+        aurHelper="paru"
+    else
+        echo "No AUR helper found. Exiting."
+        exit 0
+    fi
+
+    read -p "Do you wish to search  using $aurHelper? (y/N): " aurAns
+    if [[ "$aurAns" == "y" ]] || "$aurAns" == "Y" ]]; then
+        echo "Listing AUR packages."
+        aurSelected=$(eval "$aurHelper -Slq" | fzf -m --prompt="AUR")
+
+        if [[ -n "$aurSelected" ]]; then
+            aurPackages=$(echo "$aurSelected" | tr '\n' ' ')
+            echo "$packages will be installed using $aurHelper."
+            eval "$aurHelper -S $packages"
+        else
+            echo "No package selected. Exiting."
+        fi
+    else
+        echo "Install failed."
+    fi
+}
+
+Run() {
+    local prompt selectedPackages packages
+    prompt=$(tr '[:lower:]' '[:upper:]' <<< "${mode:0:1}")${mode:1}
+    selectedPackages=$(eval "$list" | fzf -m --preview="$preview" --preview-window=top:50%:wrap --prompt="$prompt ($packageManager)> ")
+
+    if [[ -n "$selectedPackages" ]]; then
+        packages=$(echo "$selectedPackages" | tr '\n' ' ')
+        echo "$prompt $packages"
+        eval "$operation $packages"
+    else
+        if [[ $packageManager == "pacman" ]]; then
+            HandleAur
+        else
+            echo "No package selected, Exiting."
+        fi
+    fi
+}
+
+main() {
+    ParseArgument "$@"
+    DetectPM
+    CheckFzf
+    Run
+}
+
+main "$@"

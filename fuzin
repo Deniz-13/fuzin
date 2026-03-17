@@ -49,9 +49,9 @@ DetectPM() {
 
         if [[ "$mode" == "remove" ]]; then
             ## list only installed programs.
-            list="dpkg --get-selections | grep -w install | awk '{print $1}'"
+            list="dpkg-query -W -f='\${Package}\n'"
             operation="sudo apt-get remove"
-            preview="dpkg -s {}"
+            preview="dpkg -s {} 2>/dev/null"
         else
             list="apt-cache pkgnames"
             operation="sudo apt-get install"

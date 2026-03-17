@@ -49,12 +49,12 @@ DetectPM() {
 
         if [[ "$mode" == "remove" ]]; then
             ## list only installed programs.
-            list="dpkg --get-selections | grep -w install | awk '{print \$1'"
-            operation="sudo apt remove"
+            list="dpkg --get-selections | grep -w install | awk '{print $1}'"
+            operation="sudo apt-get remove"
             preview="dpkg -s {}"
         else
             list="apt-cache pkgnames"
-            operation="sudo apt install"
+            operation="sudo apt-get install"
             preview="apt-cache show {}"
         fi
 
@@ -131,9 +131,6 @@ CheckFzf() {
     fi
 }
 
-#Main Program
-DetectPM
-CheckFzf
 HandleAur() {
     if command -v yay > /dev/null 2>&1; then
         aurHelper="yay"

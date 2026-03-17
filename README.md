@@ -6,11 +6,11 @@ A lightning-fast, cross-platform terminal wrapper that unifies package managemen
 <table width="100%">
   <tr>
   <td width="50%" align="center">
-      <b> Linux </b><br>
+      <b> Linux </b><br><br>
       <img src="img/linux-demo.gif" width="100%" alt="Linux Demo">
     </td>
     <td width="50%" align="center">
-      <b> Brew </b><br>
+      <b> Brew </b><br><br>
       <img src="img/macos-demo.gif" width="100%" alt="macOS Demo">
     </td>
   </tr>
@@ -19,7 +19,7 @@ A lightning-fast, cross-platform terminal wrapper that unifies package managemen
 ## Features
 
 * **Auto-Detection:** Seamlessly adapts to `apt`, `pacman`, `dnf`, `zypper`, or `brew` without any configuration required on your end.
-* **Multiple Selection:** Select multiple packages by pressing 'TAB'.
+* **Multiple Selection:** Select multiple packages by pressing `TAB`.
 * **Live Previews:** Instantly view package details before installing, directly within the terminal split-screen.
 * **AUR Support:** Automatically prompts Arch Linux users to search the AUR (via `yay` or `paru`) if a package isn't found in the official repositories.
 * **macOS Integration:** Unifies Homebrew `formulae` and `casks` into a single, searchable list.

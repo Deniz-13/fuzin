@@ -1,0 +1,17 @@
+cat << 'EOF' > .gitignore
+# macOS Sistem Dosyaları
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editör ve Geçici Dosyalar (Neovim/Vim, VSCode vb.)
+*~
+*.swp
+*.swo
+
+# Ham Video Dosyaları (Sadece GIF'leri GitHub'a yollayalım, devasa videolar gitmesin)
+*.mov
+*.mp4
+*.webm
+
+EOF

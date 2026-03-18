@@ -41,7 +41,7 @@ fuzin --remove
 ## Installation
 
 ```bash
-git clone [https://github.com/Deniz-13/fuzin.git](https://github.com/Deniz-13/fuzin.git)
+git clone https://github.com/Deniz-13/fuzin.git
 cd fuzin
 chmod +x fuzin
 sudo mv fuzin /usr/local/bin/fuzin

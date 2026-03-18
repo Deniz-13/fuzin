@@ -3,30 +3,30 @@
 ParseArgument() {
     # check if --remove flag is active. Default mode is install.
     case "$1" in
-        "-r" | "--remove")
-            mode="remove"
-            ;;
-        "")
-            ##set the default mode to install
-            mode="install"
-            ;;
-        "-i" | "--install")
-            mode="install"
-            ;;
-        *)
-            echo "Wrong argument '$1'"
-            echo "Usage;"
-            echo "-i or --install for installing packages. The default mode is install."
-            echo "-r or --remove for removing packges."
-            exit 1
-            ;;
+    "-r" | "--remove")
+        mode="remove"
+        ;;
+    "")
+        ##set the default mode to install
+        mode="install"
+        ;;
+    "-i" | "--install")
+        mode="install"
+        ;;
+    *)
+        echo "Wrong argument '$1'"
+        echo "Usage;"
+        echo "-i or --install for installing packages. The default mode is install."
+        echo "-r or --remove for removing packges."
+        exit 1
+        ;;
     esac
 }
 
 # Detecting package manager.
 DetectPM() {
     #PACMAN support
-    if command -v pacman > /dev/null 2>&1; then
+    if command -v pacman >/dev/null 2>&1; then
         packageManager="pacman"
 
         if [[ "$mode" == "remove" ]]; then
@@ -44,7 +44,7 @@ DetectPM() {
         fi
 
     #APT support
-    elif command -v apt > /dev/null 2>&1; then
+    elif command -v apt >/dev/null 2>&1; then
         packageManager="apt"
 
         if [[ "$mode" == "remove" ]]; then
@@ -59,7 +59,7 @@ DetectPM() {
         fi
 
     #Brew suppport
-    elif command -v brew > /dev/null 2>&1; then
+    elif command -v brew >/dev/null 2>&1; then
         packageManager="brew"
 
         if [[ "$mode" == "remove" ]]; then
@@ -73,7 +73,7 @@ DetectPM() {
         fi
 
     #DNF support
-    elif command -v dnf > /dev/null 2>&1; then
+    elif command -v dnf >/dev/null 2>&1; then
         packageManager="dnf"
         if [[ "$mode" == "remove" ]]; then
             list="dnf -q list installed | tail -n +2 | awk '{print \$1'"
@@ -86,7 +86,7 @@ DetectPM() {
         fi
 
     #ZYPPER suppport
-    elif command -v zypper > /dev/null 2>&1; then
+    elif command -v zypper >/dev/null 2>&1; then
         packageManager="zypper"
         if [[ "$mode" == "remove" ]]; then
             list="zypper -q search -i | tail -n +5 | awk -F'|' '{print \$2' | tr -d ' '"
@@ -107,7 +107,7 @@ DetectPM() {
 
 CheckFzf() {
     #Check if fzf is installed.
-    if !command -v fzf > /dev/null 2>&1; then
+    if ! command -v fzf >/dev/null 2>&1; then
         echo "fzf is not installed."
 
         #ask to user if they want to install fzf.
@@ -118,7 +118,7 @@ CheckFzf() {
             eval "$operation fzf"
 
             #check if fzf installation complete
-            if !command -v fzf > /dev/null 2>&1; then
+            if ! command -v fzf >/dev/null 2>&1; then
                 echo "fzf installation failed. Please re-run the script or install it manually."
                 exit 1
             else
@@ -132,9 +132,9 @@ CheckFzf() {
 }
 
 HandleAur() {
-    if command -v yay > /dev/null 2>&1; then
+    if command -v yay >/dev/null 2>&1; then
         aurHelper="yay"
-    elif command -v paru > /dev/null 2>&1; then
+    elif command -v paru >/dev/null 2>&1; then
         aurHelper="paru"
     else
         echo "No AUR helper found. Exiting."
@@ -160,7 +160,7 @@ HandleAur() {
 
 Run() {
     local prompt selectedPackages packages
-    prompt=$(tr '[:lower:]' '[:upper:]' <<< "${mode:0:1}")${mode:1}
+    prompt=$(tr '[:lower:]' '[:upper:]' <<<"${mode:0:1}")${mode:1}
     selectedPackages=$(eval "$list" | fzf -m --preview="$preview" --preview-window=top:50%:wrap --prompt="$prompt ($packageManager)> ")
 
     if [[ -n "$selectedPackages" ]]; then

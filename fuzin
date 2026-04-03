@@ -29,11 +29,13 @@ DetectPM() {
     if command -v pacman >/dev/null 2>&1; then
         packageManager="pacman"
 
+        #-Rns removes packages with it's dependencies.
+        removeCommand="sudo pacman -Rns"
+        installCommand="sudo pacman -S"
+
         if [[ "$mode" == "remove" ]]; then
             ## list installed packages installed on local machine.
             list="pacman -Qq"
-            ## -Rns removes the package with its dependencies.
-            operation="sudo pacman -Rns"
             ## show preview of installed package
             preview="pacman -Qi {}"
         else
@@ -46,55 +48,57 @@ DetectPM() {
     #APT support
     elif command -v apt >/dev/null 2>&1; then
         packageManager="apt"
+        removeCommand="sudo apt-get remove"
+        installCommand="sudo apt-get install"
 
         if [[ "$mode" == "remove" ]]; then
             ## list only installed programs.
             list="dpkg-query -W -f='\${Package}\n'"
-            operation="sudo apt-get remove"
             preview="dpkg -s {} 2>/dev/null"
         else
             list="apt-cache pkgnames"
-            operation="sudo apt-get install"
             preview="apt-cache show {}"
         fi
 
     #Brew suppport
     elif command -v brew >/dev/null 2>&1; then
         packageManager="brew"
+        removeCommand="brew uninstall"
+        installCommand="brew install"
 
         if [[ "$mode" == "remove" ]]; then
             list="brew list -1"
-            operation="brew uninstall"
             preview="brew info {}"
         else
             list="{ brew formulae; brew casks; }"
-            operation="brew install"
             preview="brew info {}"
         fi
 
     #DNF support
     elif command -v dnf >/dev/null 2>&1; then
         packageManager="dnf"
+        removeCommand="sudo dnf remove"
+        installCommand="sudo dnf install"
+
         if [[ "$mode" == "remove" ]]; then
-            list="dnf -q list installed | tail -n +2 | awk '{print \$1'"
-            operation="sudo dnf remove"
+            list="dnf -q list installed | tail -n +2 | awk '{print \$1}'"
             preview="dnf info {}"
         else
-            list="dnf -q list available | tail -n +2 | awk '{print \$1'"
-            operation="sudo dnf install"
+            list="dnf -q list available | tail -n +2 | awk '{print \$1}'"
             preview="dnf info {}"
         fi
 
     #ZYPPER suppport
     elif command -v zypper >/dev/null 2>&1; then
         packageManager="zypper"
+        removeCommand="sudo zypper remove"
+        installCommand="sudo zypper install"
+
         if [[ "$mode" == "remove" ]]; then
-            list="zypper -q search -i | tail -n +5 | awk -F'|' '{print \$2' | tr -d ' '"
-            operation="sudo zypper remove"
+            list="zypper -q search -i | tail -n +5 | awk -F'|' '{print \$2}' | tr -d ' '"
             preview="zypper info {}"
         else
-            list="zypper -q search | tail -n +5 | awk -F'|' '{print \$2' | tr -d ' '"
-            operation="sudo zypper install"
+            list="zypper -q search | tail -n +5 | awk -F'|' '{print \$2}' | tr -d ' '"
             preview="zypper info {}"
         fi
 
@@ -103,6 +107,13 @@ DetectPM() {
         echo "No supported package manager found."
         exit 1
     fi
+
+    if [[ "$mode" == "remove" ]]; then
+        operation="$removeCommand"
+    else
+        operation="$installCommand"
+    fi
+
 }
 
 CheckFzf() {
@@ -111,11 +122,11 @@ CheckFzf() {
         echo "fzf is not installed."
 
         #ask to user if they want to install fzf.
-        read -p "Do you want to install fzf using $packageManager? (y/N): " fzfAns
+        read -r -p "Do you want to install fzf using $packageManager? (y/N): " fzfAns
 
         if [[ "$fzfAns" == "y" || "$fzfAns" == "Y" ]]; then
             echo "installing fzf..."
-            eval "$operation fzf"
+            eval "$installCommand fzf"
 
             #check if fzf installation complete
             if ! command -v fzf >/dev/null 2>&1; then
@@ -141,20 +152,20 @@ HandleAur() {
         exit 0
     fi
 
-    read -p "Do you wish to search  using $aurHelper? (y/N): " aurAns
-    if [[ "$aurAns" == "y" ]] || "$aurAns" == "Y" ]]; then
+    read -r -p "Do you wish to search  using $aurHelper? (y/N): " aurAns
+    if [[ "$aurAns" == "y" || "$aurAns" == "Y" ]]; then
         echo "Listing AUR packages."
         aurSelected=$(eval "$aurHelper -Slq" | fzf -m --prompt="AUR")
 
         if [[ -n "$aurSelected" ]]; then
-            aurPackages=$(echo "$aurSelected" | tr '\n' ' ')
+            packages=$(echo "$aurSelected" | tr '\n' ' ')
             echo "$packages will be installed using $aurHelper."
             eval "$aurHelper -S $packages"
         else
             echo "No package selected. Exiting."
         fi
     else
-        echo "Install failed."
+        echo "No package selected. Exiting."
     fi
 }
 
@@ -168,7 +179,7 @@ Run() {
         echo "$prompt $packages"
         eval "$operation $packages"
     else
-        if [[ $packageManager == "pacman" ]]; then
+        if [[ $packageManager == "pacman" || $mode == "install" ]]; then
             HandleAur
         else
             echo "No package selected, Exiting."

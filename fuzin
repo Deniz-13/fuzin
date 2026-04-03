@@ -13,11 +13,21 @@ ParseArgument() {
     "-i" | "--install")
         mode="install"
         ;;
+    "-y" | "--yay")
+        mode="install"
+        forceManager="yay"
+        ;;
+    "-p" | "--paru")
+        mode="install"
+        forceManager="paru"
+        ;;
     *)
         echo "Wrong argument '$1'"
         echo "Usage;"
         echo "-i or --install for installing packages. The default mode is install."
         echo "-r or --remove for removing packges."
+        echo "-y or --yay to select yay."
+        echo "-p or --paru to select paru."
         exit 1
         ;;
     esac
@@ -25,8 +35,45 @@ ParseArgument() {
 
 # Detecting package manager.
 DetectPM() {
+
+    #paru support, will select paru if both paru and yay are selected.
+    if [[ "$forceManager" == "paru" ]]; then
+        if ! command -v paru >/dev/null 2>&1; then
+            echo "paru is not installed. Exiting."
+            exit 1
+        else
+            packageManager="paru"
+            installCommand="paru -S"
+            removeCommand="paru -Rns"
+            if [[ "$mode" == "remove" ]]; then
+                list="paru -Qq"
+                preview="paru -Qi {}"
+            else
+                list="paru -Ssq"
+                preview="paru -Si {}"
+            fi
+        fi
+
+    #yay support
+    elif [[ "$forceManager" == "yay" ]]; then
+        if ! command -v yay >/dev/null 2>&1; then
+            echo "yay is not installed. Exiting."
+            exit 1
+        else
+            packageManager="yay"
+            installCommand="yay -S"
+            removeCommand="yay -Rns"
+            if [[ "$mode" == "remove" ]]; then
+                list="yay -Qq"
+                preview="yay -Qi {}"
+            else
+                list="yay -Ssq"
+                preview="yay -Si {}"
+            fi
+        fi
+
     #PACMAN support
-    if command -v pacman >/dev/null 2>&1; then
+    elif command -v pacman >/dev/null 2>&1; then
         packageManager="pacman"
 
         #-Rns removes packages with it's dependencies.

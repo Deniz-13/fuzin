@@ -179,7 +179,7 @@ Run() {
         echo "$prompt $packages"
         eval "$operation $packages"
     else
-        if [[ $packageManager == "pacman" || $mode == "install" ]]; then
+        if [[ $packageManager == "pacman" && $mode == "install" ]]; then
             HandleAur
         else
             echo "No package selected, Exiting."

@@ -36,6 +36,13 @@ fuzin --install
 # Remove installed packages
 fuzin -r
 fuzin --remove
+
+# Select an AUR helper (can be combined with install/remove)
+fuzin --yay
+fuzin --remove --paru
+
+# Show help
+fuzin --help
 ```
 
 ## Installation
@@ -46,5 +53,4 @@ cd fuzin
 chmod +x fuzin
 sudo mv fuzin /usr/local/bin/fuzin
 ```
-
 

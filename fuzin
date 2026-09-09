@@ -1,36 +1,33 @@
 #!/bin/bash
 
-ParseArgument() {
-    # check if --remove flag is active. Default mode is install.
-    case "$1" in
-    "-r" | "--remove")
-        mode="remove"
-        ;;
-    "")
-        ##set the default mode to install
-        mode="install"
-        ;;
-    "-i" | "--install")
-        mode="install"
-        ;;
-    "-y" | "--yay")
-        mode="install"
-        forceManager="yay"
-        ;;
-    "-p" | "--paru")
-        mode="install"
-        forceManager="paru"
-        ;;
-    *)
-        echo "Wrong argument '$1'"
-        echo "Usage;"
-        echo "-i or --install for installing packages. The default mode is install."
-        echo "-r or --remove for removing packges."
-        echo "-y or --yay to select yay."
-        echo "-p or --paru to select paru."
-        exit 1
-        ;;
-    esac
+set -o pipefail
+
+Usage() {
+    echo "Usage: fuzin [-i|--install] [-r|--remove] [-y|--yay] [-p|--paru] [-h|--help]"
+}
+
+ParseArguments() {
+    mode="install"
+    forceManager=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        "-r" | "--remove") mode="remove" ;;
+        "-i" | "--install") mode="install" ;;
+        "-y" | "--yay") forceManager="yay" ;;
+        "-p" | "--paru") forceManager="paru" ;;
+        "-h" | "--help")
+            Usage
+            exit 0
+            ;;
+        *)
+            echo "Wrong argument '$1'" >&2
+            Usage >&2
+            exit 1
+            ;;
+        esac
+        shift
+    done
 }
 
 # Detecting package manager.
@@ -43,13 +40,11 @@ DetectPM() {
             exit 1
         else
             packageManager="paru"
-            installCommand="paru -S"
-            removeCommand="paru -Rns"
+            installCommand=(paru -S)
+            removeCommand=(paru -Rns)
             if [[ "$mode" == "remove" ]]; then
-                list="paru -Qq"
                 preview="paru -Qi {}"
             else
-                list="paru -Ssq"
                 preview="paru -Si {}"
             fi
         fi
@@ -61,13 +56,11 @@ DetectPM() {
             exit 1
         else
             packageManager="yay"
-            installCommand="yay -S"
-            removeCommand="yay -Rns"
+            installCommand=(yay -S)
+            removeCommand=(yay -Rns)
             if [[ "$mode" == "remove" ]]; then
-                list="yay -Qq"
                 preview="yay -Qi {}"
             else
-                list="yay -Ssq"
                 preview="yay -Si {}"
             fi
         fi
@@ -77,77 +70,48 @@ DetectPM() {
         packageManager="pacman"
 
         #-Rns removes packages with it's dependencies.
-        removeCommand="sudo pacman -Rns"
-        installCommand="sudo pacman -S"
+        removeCommand=(sudo pacman -Rns)
+        installCommand=(sudo pacman -S)
 
         if [[ "$mode" == "remove" ]]; then
-            ## list installed packages installed on local machine.
-            list="pacman -Qq"
             ## show preview of installed package
             preview="pacman -Qi {}"
         else
-            ## list pacman repository
-            list="pacman -Ssq"
-            operation="sudo pacman -S"
             preview="pacman -Si {}"
         fi
 
     #APT support
     elif command -v apt >/dev/null 2>&1; then
         packageManager="apt"
-        removeCommand="sudo apt-get remove"
-        installCommand="sudo apt-get install"
+        removeCommand=(sudo apt-get remove)
+        installCommand=(sudo apt-get install)
 
         if [[ "$mode" == "remove" ]]; then
-            ## list only installed programs.
-            list="dpkg-query -W -f='\${Package}\n'"
             preview="dpkg -s {} 2>/dev/null"
         else
-            list="apt-cache pkgnames"
             preview="apt-cache show {}"
         fi
 
     #Brew suppport
     elif command -v brew >/dev/null 2>&1; then
         packageManager="brew"
-        removeCommand="brew uninstall"
-        installCommand="brew install"
-
-        if [[ "$mode" == "remove" ]]; then
-            list="brew list -1"
-            preview="brew info {}"
-        else
-            list="{ brew formulae; brew casks; }"
-            preview="brew info {}"
-        fi
+        removeCommand=(brew uninstall)
+        installCommand=(brew install)
+        preview="brew info {}"
 
     #DNF support
     elif command -v dnf >/dev/null 2>&1; then
         packageManager="dnf"
-        removeCommand="sudo dnf remove"
-        installCommand="sudo dnf install"
-
-        if [[ "$mode" == "remove" ]]; then
-            list="dnf -q list installed | tail -n +2 | awk '{print \$1}'"
-            preview="dnf info {}"
-        else
-            list="dnf -q list available | tail -n +2 | awk '{print \$1}'"
-            preview="dnf info {}"
-        fi
+        removeCommand=(sudo dnf remove)
+        installCommand=(sudo dnf install)
+        preview="dnf info {}"
 
     #ZYPPER suppport
     elif command -v zypper >/dev/null 2>&1; then
         packageManager="zypper"
-        removeCommand="sudo zypper remove"
-        installCommand="sudo zypper install"
-
-        if [[ "$mode" == "remove" ]]; then
-            list="zypper -q search -i | tail -n +5 | awk -F'|' '{print \$2}' | tr -d ' '"
-            preview="zypper info {}"
-        else
-            list="zypper -q search | tail -n +5 | awk -F'|' '{print \$2}' | tr -d ' '"
-            preview="zypper info {}"
-        fi
+        removeCommand=(sudo zypper remove)
+        installCommand=(sudo zypper install)
+        preview="zypper info {}"
 
     #Exit if no package manager found.
     else
@@ -156,11 +120,31 @@ DetectPM() {
     fi
 
     if [[ "$mode" == "remove" ]]; then
-        operation="$removeCommand"
+        operation=("${removeCommand[@]}")
     else
-        operation="$installCommand"
+        operation=("${installCommand[@]}")
     fi
 
+}
+
+ListPackages() {
+    case "$packageManager:$mode" in
+    paru:remove) paru -Qq ;;
+    paru:install) paru -Ssq ;;
+    yay:remove) yay -Qq ;;
+    yay:install) yay -Ssq ;;
+    pacman:remove) pacman -Qq ;;
+    pacman:install) pacman -Ssq ;;
+    apt:remove) dpkg-query -W -f='${Package}\n' ;;
+    apt:install) apt-cache pkgnames ;;
+    brew:remove) brew list -1 ;;
+    brew:install) brew formulae && brew casks ;;
+    dnf:remove) dnf -q list installed | tail -n +2 | awk '{print $1}' ;;
+    dnf:install) dnf -q list available | tail -n +2 | awk '{print $1}' ;;
+    zypper:remove) zypper -q search -i | tail -n +5 | awk -F'|' '{print $2}' | tr -d ' ' ;;
+    zypper:install) zypper -q search | tail -n +5 | awk -F'|' '{print $2}' | tr -d ' ' ;;
+    *) return 1 ;;
+    esac
 }
 
 CheckFzf() {
@@ -173,7 +157,7 @@ CheckFzf() {
 
         if [[ "$fzfAns" == "y" || "$fzfAns" == "Y" ]]; then
             echo "installing fzf..."
-            eval "$installCommand fzf"
+            "${installCommand[@]}" fzf
 
             #check if fzf installation complete
             if ! command -v fzf >/dev/null 2>&1; then
@@ -190,6 +174,9 @@ CheckFzf() {
 }
 
 HandleAur() {
+    local packageList aurSelected fzfResult package
+    local -a packages
+
     if command -v yay >/dev/null 2>&1; then
         aurHelper="yay"
     elif command -v paru >/dev/null 2>&1; then
@@ -202,12 +189,32 @@ HandleAur() {
     read -r -p "Do you wish to search  using $aurHelper? (y/N): " aurAns
     if [[ "$aurAns" == "y" || "$aurAns" == "Y" ]]; then
         echo "Listing AUR packages."
-        aurSelected=$(eval "$aurHelper -Slq" | fzf -m --prompt="AUR")
+        packageList=$(mktemp "${TMPDIR:-/tmp}/fuzin.XXXXXX") || return 1
+
+        if ! "$aurHelper" -Slq >"$packageList"; then
+            rm -f "$packageList"
+            echo "Could not list AUR packages." >&2
+            return 1
+        fi
+
+        aurSelected=$(fzf -m --prompt="AUR> " <"$packageList")
+        fzfResult=$?
+        rm -f "$packageList"
+
+        if [[ $fzfResult -eq 130 ]]; then
+            echo "Cancelled."
+            return 130
+        elif [[ $fzfResult -ne 0 && $fzfResult -ne 1 ]]; then
+            echo "fzf failed." >&2
+            return "$fzfResult"
+        fi
 
         if [[ -n "$aurSelected" ]]; then
-            packages=$(echo "$aurSelected" | tr '\n' ' ')
-            echo "$packages will be installed using $aurHelper."
-            eval "$aurHelper -S $packages"
+            while IFS= read -r package; do
+                [[ -n "$package" ]] && packages+=("$package")
+            done <<<"$aurSelected"
+            echo "${packages[*]} will be installed using $aurHelper."
+            "$aurHelper" -S "${packages[@]}"
         else
             echo "No package selected. Exiting."
         fi
@@ -217,14 +224,36 @@ HandleAur() {
 }
 
 Run() {
-    local prompt selectedPackages packages
+    local prompt selectedPackages packageList fzfResult package
+    local -a packages
+
     prompt=$(tr '[:lower:]' '[:upper:]' <<<"${mode:0:1}")${mode:1}
-    selectedPackages=$(eval "$list" | fzf -m --preview="$preview" --preview-window=top:50%:wrap --prompt="$prompt ($packageManager)> ")
+    packageList=$(mktemp "${TMPDIR:-/tmp}/fuzin.XXXXXX") || return 1
+
+    if ! ListPackages >"$packageList"; then
+        rm -f "$packageList"
+        echo "Could not list packages using $packageManager." >&2
+        return 1
+    fi
+
+    selectedPackages=$(fzf -m --preview="$preview" --preview-window=top:50%:wrap --prompt="$prompt ($packageManager)> " <"$packageList")
+    fzfResult=$?
+    rm -f "$packageList"
+
+    if [[ $fzfResult -eq 130 ]]; then
+        echo "Cancelled."
+        return 130
+    elif [[ $fzfResult -ne 0 && $fzfResult -ne 1 ]]; then
+        echo "fzf failed." >&2
+        return "$fzfResult"
+    fi
 
     if [[ -n "$selectedPackages" ]]; then
-        packages=$(echo "$selectedPackages" | tr '\n' ' ')
-        echo "$prompt $packages"
-        eval "$operation $packages"
+        while IFS= read -r package; do
+            [[ -n "$package" ]] && packages+=("$package")
+        done <<<"$selectedPackages"
+        echo "$prompt ${packages[*]}"
+        "${operation[@]}" "${packages[@]}"
     else
         if [[ $packageManager == "pacman" && $mode == "install" ]]; then
             HandleAur
@@ -235,10 +264,12 @@ Run() {
 }
 
 main() {
-    ParseArgument "$@"
+    ParseArguments "$@"
     DetectPM
     CheckFzf
     Run
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

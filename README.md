@@ -28,22 +28,31 @@ A lightning-fast, cross-platform terminal wrapper that unifies package managemen
 ## Usage
 
 ```bash
-# Install packages (Default mode)
+# Auto-detect the package manager and install packages
 fuzin
 fuzin -i
 fuzin --install
 
-# Remove installed packages
+# Auto-detect the package manager and remove packages
 fuzin -r
 fuzin --remove
 
-# Select an AUR helper (can be combined with install/remove)
+# Use yay
+fuzin -y
 fuzin --yay
-fuzin --remove --paru
+fuzin -r -y
+
+# Use paru
+fuzin -p
+fuzin --paru
+fuzin -r -p
 
 # Show help
+fuzin -h
 fuzin --help
 ```
+
+`--yay` and `--paru` can be combined with `--install` or `--remove`.
 
 ## Installation
 
@@ -53,4 +62,3 @@ cd fuzin
 chmod +x fuzin
 sudo mv fuzin /usr/local/bin/fuzin
 ```
-
